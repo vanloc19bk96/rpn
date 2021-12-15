@@ -13,15 +13,15 @@ class RPN(nn.Module):
         self.cls_layer = nn.Conv2d(in_channels=out_channels, out_channels=num_anchors * 1, kernel_size=(1, 1),
                                    stride=(1, 1), padding=0)
 
-        # self.conv1.weight.data.normal_(0, 0.01)
-        # self.conv1.bias.data.zero_()
-        # self.reg_layer.weight.data.normal_(0, 0.01)
-        # self.reg_layer.bias.data.zero_()
-        # self.cls_layer.weight.data.normal_(0, 0.01)
-        # self.cls_layer.bias.data.zero_()
+        self.conv1.weight.data.normal_(0, 0.01)
+        self.conv1.bias.data.zero_()
+        self.reg_layer.weight.data.normal_(0, 0.01)
+        self.reg_layer.bias.data.zero_()
+        self.cls_layer.weight.data.normal_(0, 0.01)
+        self.cls_layer.bias.data.zero_()
 
     def forward(self, input_feature_map):
-        x = torch.relu(self.conv1(input_feature_map))
+        x = self.conv1(input_feature_map)
         pred_anchor_locs = self.reg_layer(x)
         pred_cls_scores = torch.sigmoid(self.cls_layer(x))
 

@@ -104,14 +104,52 @@ def calculate_offset(anchors, bounding_boxes, iou_list):
     return offset_list
 
 
-def offset_to_center(offset, anchors):
-    anchor_center_x, anchor_center_y, anchor_width, anchor_height = anchors[:, 0], anchors[:, 1], anchors[:,
-                                                                                                  2], anchors[:, 3]
-    dx, dy, dw, dh = offset[:, 0], offset[:, 1], offset[:, 2], offset[:, 3]
+def offset_to_voc(offset, anchors):
+    anchor_center_x, anchor_center_y, anchor_width, anchor_height = to_center_format(
+        anchors[..., 0],
+        anchors[..., 1],
+        anchors[..., 2],
+        anchors[..., 3])
+    dx, dy, dw, dh = offset[..., 0], offset[..., 1], offset[..., 2], offset[..., 3]
     center_x = anchor_width * dw + anchor_center_x
     center_y = anchor_height * dh + anchor_center_y
     width = torch.exp(dw) * anchor_width
     height = torch.exp(dh) * anchor_height
 
-    boxes = torch.stack([center_x, center_y, width, height], dim=-1)
-    return boxes
+    x_min, y_min, x_max, y_max = to_voc_format(center_x, center_y, width, height)
+    return x_min, y_min, x_max, y_max
+
+
+def nms(roi_sorted, nms_top):
+    batch_size = roi_sorted.size(0)
+    keeps = []
+    for batch_index in range(batch_size):
+        roi_idx = torch.arange(0, nms_top, 1)
+        x1 = roi_sorted[batch_index, :, 0]
+        y1 = roi_sorted[batch_index, :, 1]
+        x2 = roi_sorted[batch_index, :, 2]
+        y2 = roi_sorted[batch_index, :, 3]
+
+        # + 1 to prevent division by zero
+        width_list = (x2 - x1) + 1
+        height_list = (y2 - y1) + 1
+        area_list = width_list * height_list
+
+        keep = []
+        while roi_idx.nelement() > 0:
+            current_id = roi_idx[0]
+            keep.append(current_id)
+
+            xx1 = np.maximum(x1[current_id], x1[roi_idx[1:]])
+            yy1 = np.maximum(y1[current_id], y1[roi_idx[1:]])
+            xx2 = np.minimum(x2[current_id], x2[roi_idx[1:]])
+            yy2 = np.minimum(y2[current_id], y2[roi_idx[1:]])
+            w = np.maximum(0., xx2 - xx1 + 1)
+            h = np.maximum(0., yy2 - yy1 + 1)
+            inter = w * h
+            iou = inter / (area_list[current_id] + area_list[roi_idx[1:]] - inter)
+            keep_idx = torch.where(iou <= 0.7)[0]
+            roi_idx = roi_idx[keep_idx + 1]
+        keeps.append(keep)
+
+    return torch.tensor(keeps).view(batch_size, -1)

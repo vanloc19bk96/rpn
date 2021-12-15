@@ -10,15 +10,18 @@ import torch
 import models.backbone as module_backbone
 
 
-class TrafficLightDataset(Dataset):
-    def __init__(self, data_dir, image_width, image_height, scales=None, ratios=None,
-                 transformation=None, generate_input_model=None):
+class SimpleDataset(Dataset):
+    def __init__(self, training_data_dir, testing_data_dir, image_width, image_height, scales=None, ratios=None,
+                 transformation=None, generate_input_model=None, training=True):
         if ratios is None:
             ratios = [0.5, 1, 2]
         if scales is None:
             scales = [8, 16, 32]
 
-        self.data_dir = data_dir
+        if training:
+            self.data_dir = training_data_dir
+        else:
+            self.data_dir = testing_data_dir
         self.image_width = image_width
         self.image_height = image_height
         self.scales = scales
@@ -55,6 +58,7 @@ class TrafficLightDataset(Dataset):
         image = torch.transpose(torch.tensor(image.copy()), 2, 0).type(torch.FloatTensor)
         input_feature = generate_input_model(torch.unsqueeze(image, 0))
 
-        offset_label_list, anchor_list = generate_anchor(input_feature.size(), image.size(), bounding_boxes, self.ratios,
-                                            self.scales)
+        offset_label_list, anchor_list = generate_anchor(input_feature.size(), image.size(), bounding_boxes,
+                                                         self.ratios,
+                                                         self.scales)
         return torch.squeeze(input_feature, 0), offset_label_list, anchor_list

@@ -57,8 +57,7 @@ def generate_anchor(input_size, image_size, bounding_boxes, ratios, scales):
     valid_anchor_label_list = assign_labels(valid_anchors, bounding_boxes)
     label_list[valid_anchor_idx_list] = valid_anchor_label_list
     label_list = sample_anchor_labels(label_list)
-    return torch.Tensor(np.concatenate((offset_list, label_list), axis=1)), torch.Tensor(
-        np.concatenate((valid_anchors, label_list[valid_anchor_idx_list]), axis=1))
+    return torch.Tensor(np.concatenate((offset_list, label_list), axis=1)), anchors
 
 
 def assign_labels(anchors, bounding_boxes):
